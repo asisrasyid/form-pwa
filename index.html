@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Form Input Data</title>
+  <title>Finance Management</title>
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#4CAF50"/>
   <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/906/906334.png" />
+  <link rel="stylesheet" href="assets/sweetalert2/sweetalert2.css">
   <style>
     body {
       font-family: sans-serif;
@@ -27,8 +28,16 @@
       margin-bottom: 20px;
       color: #333;
     }
-    input, button {
+    input {
       width: 90%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    select,button {
+      width: 96%;
       padding: 12px;
       margin: 10px 0;
       border: 1px solid #ccc;
@@ -59,20 +68,33 @@
 </head>
 <body>
   <div class="container">
-    <h2>Form Input Data</h2>
+    <h2>Transaksi</h2>
     <form id="dataForm">
-        <input type="text" name="nama" placeholder="Nama Lengkap" required />
-        <input type="number" name="umur" placeholder="Umur" required />
-        <input type="email" name="email" placeholder="Email" required />
-        <button type="submit">Kirim Data</button>
+      <select id="JenisTransaksi" required>
+        <option>Pilih Jenis</option>
+      </select>
+      <select id="keteranganDropdown" required>
+        <option>Pilih Keterangan</option>
+      </select>
+      <select id="enumDropdown" required>
+        <option>Pilih Subkategori</option>
+      </select>
+      <input type="text" name="Jenis" id="inputJenis" hidden>
+      <input type="text" name="Kategori" id="inputKategori" hidden>
+      <input type="text" name="Subkategori" id="inputSubkategori" hidden>
+        <input type="text" name="Keterangan" placeholder="Keterangan" required />
+        <input type="number" name="Jumlah" placeholder="Jumlah (Rp)" required />
+        <input type="text" name="Sumber" placeholder="Sumber" required />
+        <button type="submit" >Simpan Data</button>
+        <div id="result" style="margin-top: 5px; align-content: center;"></div>        
       </form>
     
-      <div id="result"></div>
-  </div>
-  <div class="footer">
-    &copy; 2025 | Form Mobile PWA
   </div>
 
+  <div class="footer">
+    &copy; 2025 | Finance Management
+  </div>
+  <script src="assets/sweetalert2/sweetalert2.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('service-worker.js')
@@ -81,25 +103,158 @@
     }
   </script> 
   <script> 
+  const spreadsheetUrl2 = "https://script.google.com/macros/s/AKfycbyBfKNeW5yhAyL8BdaJo6AhkbVfEPeorcqOMjPElrCCZJU9sQpCKpWwGAAqSYqKSqFw2g/exec"; 
      document.getElementById("dataForm").addEventListener("submit", function(e){
       e.preventDefault();
       const form = e.target;
       const formData = new FormData(form);
-      fetch("https://script.google.com/macros/s/AKfycbyBfKNeW5yhAyL8BdaJo6AhkbVfEPeorcqOMjPElrCCZJU9sQpCKpWwGAAqSYqKSqFw2g/exec", {
+      fetch(spreadsheetUrl2, {
         method: "POST",
         body: formData,
         redirect: 'follow'
       })
       .then(res => res.text())
       .then(text => {
-        document.getElementById("result").innerText = text;
+        Swal.fire({
+  title: 'Berhasil!',
+  text: text,
+  icon: 'success',
+  confirmButtonText: 'Sip!'
+});
         form.reset();
       })
       .catch(err => {
+        Swal.fire({
+  title: 'Ups!',
+  text: err,
+  icon: 'warning',
+  confirmButtonText: 'Sorry!'
+});
         console.log(err);
         document.getElementById("result").innerText = "❌ Terjadi kesalahan.";
       });
     });
+  </script>
+  <script>
+    const spreadsheetUrl = "https://script.google.com/macros/s/AKfycbyBfKNeW5yhAyL8BdaJo6AhkbVfEPeorcqOMjPElrCCZJU9sQpCKpWwGAAqSYqKSqFw2g/exec"; // Ganti dgn URL kamu
+    fetch(spreadsheetUrl)
+      .then(res => res.json())
+      .then(data => {
+        const jenisDropdown = document.getElementById("JenisTransaksi");
+        const kelompokDropdown = document.getElementById("keteranganDropdown");
+        const enumDropdown = document.getElementById("enumDropdown");
+
+
+        const inputJenis = document.getElementById("inputJenis");
+        const inputKategori = document.getElementById("inputKategori");
+        const inputSubkategori = document.getElementById("inputSubkategori");
+    
+        // 1. Isi dropdown Jenis
+        Object.keys(data.byJenis).forEach(jenis => {
+          const opt = document.createElement("option");
+          opt.value = jenis;
+          opt.textContent = jenis;
+          jenisDropdown.appendChild(opt);
+        });
+        // Ketika Jenis dipilih
+jenisDropdown.addEventListener("change", function () {
+  const selectedJenis = this.value;
+  inputJenis.value = selectedJenis; // update hidden input
+
+  kelompokDropdown.innerHTML = '<option>Pilih Kelompok</option>';
+  enumDropdown.innerHTML = '<option>Pilih Keterangan</option>';
+  inputKategori.value = '';
+  inputSubkategori.value = '';
+
+  if (data.byJenis[selectedJenis]) {
+    data.byJenis[selectedJenis].forEach(kelompok => {
+      const opt = document.createElement("option");
+      opt.value = kelompok;
+      opt.textContent = kelompok;
+      kelompokDropdown.appendChild(opt);
+    });
+  }
+});
+
+// Ketika Kelompok dipilih
+kelompokDropdown.addEventListener("change", function () {
+  const selectedKelompok = this.value;
+  inputKategori.value = selectedKelompok; // update hidden input
+
+  enumDropdown.innerHTML = '<option>Pilih Keterangan</option>';
+  inputSubkategori.value = '';
+
+  if (data.byKelompok[selectedKelompok]) {
+    data.byKelompok[selectedKelompok].forEach(keterangan => {
+      const opt = document.createElement("option");
+      opt.value = keterangan;
+      opt.textContent = keterangan;
+      enumDropdown.appendChild(opt);
+    });
+  }
+});
+
+// Ketika Subkategori dipilih
+enumDropdown.addEventListener("change", function () {
+  const selectedSubkategori = this.value;
+  inputSubkategori.value = selectedSubkategori; // update hidden input
+});
+
+        // 2. Ketika Jenis dipilih → tampilkan Kelompok
+        // jenisDropdown.addEventListener("change", function () {
+        //   const selectedJenis = this.value;
+        //   kelompokDropdown.innerHTML = '<option>Pilih Kelompok</option>';
+        //   enumDropdown.innerHTML = '<option>Pilih Keterangan</option>';
+    
+        //   if (data.byJenis[selectedJenis]) {
+        //     data.byJenis[selectedJenis].forEach(kelompok => {
+        //       const opt = document.createElement("option");
+        //       opt.value = kelompok;
+        //       opt.textContent = kelompok;
+        //       kelompokDropdown.appendChild(opt);
+        //     });
+        //   }
+        // });
+    
+        // // 3. Ketika Kelompok dipilih → tampilkan EnumKeterangan
+        // kelompokDropdown.addEventListener("change", function () {
+        //   const selectedKelompok = this.value;
+        //   enumDropdown.innerHTML = '<option>Pilih Keterangan</option>';
+    
+        //   if (data.byKelompok[selectedKelompok]) {
+        //     data.byKelompok[selectedKelompok].forEach(keterangan => {
+        //       const opt = document.createElement("option");
+        //       opt.value = keterangan;
+        //       opt.textContent = keterangan;
+        //       enumDropdown.appendChild(opt);
+        //     });
+        //   }
+        // });
+      });
+    // fetch(spreadsheetUrl)
+    //   .then(res => res.json())
+    //   .then(data => {
+    //     const JenisTransaksi = document.getElementById("JenisTransaksi");
+    //     const keteranganDropdown = document.getElementById("keteranganDropdown");
+    //     const enumDropdown = document.getElementById("enumDropdown");
+    //     Object.keys(data).forEach(k => {
+    //       const opt = document.createElement("option");
+    //       opt.value = k;
+    //       opt.textContent = k;
+    //       keteranganDropdown.appendChild(opt);
+    //     });
+
+    //     keteranganDropdown.addEventListener("change", function () {
+    //       const selected = this.value;
+    //       enumDropdown.innerHTML = '<option>Pilih Subkategori</option>';
+    //       data[selected].forEach(item => {
+    //         const opt = document.createElement("option");
+    //         opt.value = item;
+    //         opt.textContent = item;
+    //         enumDropdown.appendChild(opt);
+    //       });
+    //     });
+    //   });
   </script>
 </body>
 </html>
